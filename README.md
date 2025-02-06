@@ -6,6 +6,10 @@
 [![Image push](https://github.com/Mellanox/spectrum-x-operator/actions/workflows/image-push-main.yml/badge.svg?event=push)](https://github.com/Mellanox/spectrum-x-operator/actions/workflows/image-push-main.yml)
 
 # NVIDIA Spectrum-X Operator
-Operator that Orchestrates NVIDIA Spectrum-X networking for Kubernetes
+Operator that Orchestrates NVIDIA Spectrum-X networking for Kubernetes.
+This Operator is intended to be deployed via [NVIDIA Network Operator](https://github.com/Mellanox/network-operator)
+and should not be regarded as a standalone component.
+
+Network Operator Documentation can be found [here](https://docs.nvidia.com/networking/software/cloud-orchestration/index.html)
 
 > __NOTE__: This project is currently under active development.
