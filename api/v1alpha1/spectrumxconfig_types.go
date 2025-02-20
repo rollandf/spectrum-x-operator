@@ -20,16 +20,33 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // SpectrumXConfigSpec defines the desired state of SpectrumXConfig
 type SpectrumXConfigSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	SpectrumXEWNetworks []RailNetwork    `json:"spectrumXEWNetworks"`
+	NetworkMappings     []NetworkMapping `json:"networkMappings"`
+	Hosts               []Host           `json:"hosts"`
+}
 
-	// Foo is an example field of SpectrumXConfig. Edit spectrumxconfig_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+type RailNetwork struct {
+	Name            string `json:"name"`
+	RailSubnet      string `json:"railSubnet"`
+	CrossRailSubnet string `json:"crossRailSubnet"`
+}
+
+type NetworkMapping struct {
+	Rail      string `json:"rail"`
+	Interface string `json:"interface"`
+}
+
+type Host struct {
+	HostID string     `json:"hostID"`
+	Rails  []HostRail `json:"rails"`
+}
+
+type HostRail struct {
+	RailName       string `json:"railName"`
+	RailSubnet     string `json:"railSubnet"`
+	PeerLeafPortIP string `json:"peerLeafPortIP"`
 }
 
 // SpectrumXConfigStatus defines the observed state of SpectrumXConfig

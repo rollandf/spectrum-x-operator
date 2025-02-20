@@ -39,10 +39,62 @@ spec:
           spec:
             description: SpectrumXConfigSpec defines the desired state of SpectrumXConfig
             properties:
-              foo:
-                description: Foo is an example field of SpectrumXConfig. Edit spectrumxconfig_types.go
-                  to remove/update
-                type: string
+              hosts:
+                items:
+                  properties:
+                    hostID:
+                      type: string
+                    rails:
+                      items:
+                        properties:
+                          peerLeafPortIP:
+                            type: string
+                          railName:
+                            type: string
+                          railSubnet:
+                            type: string
+                        required:
+                        - peerLeafPortIP
+                        - railName
+                        - railSubnet
+                        type: object
+                      type: array
+                  required:
+                  - hostID
+                  - rails
+                  type: object
+                type: array
+              networkMappings:
+                items:
+                  properties:
+                    interface:
+                      type: string
+                    rail:
+                      type: string
+                  required:
+                  - interface
+                  - rail
+                  type: object
+                type: array
+              spectrumXEWNetworks:
+                items:
+                  properties:
+                    crossRailSubnet:
+                      type: string
+                    name:
+                      type: string
+                    railSubnet:
+                      type: string
+                  required:
+                  - crossRailSubnet
+                  - name
+                  - railSubnet
+                  type: object
+                type: array
+            required:
+            - hosts
+            - networkMappings
+            - spectrumXEWNetworks
             type: object
           status:
             description: SpectrumXConfigStatus defines the observed state of SpectrumXConfig
