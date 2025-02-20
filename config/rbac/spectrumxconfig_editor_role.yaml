@@ -1,8 +1,11 @@
----
+# permissions for end users to edit spectrumxconfigs.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: manager-role
+  labels:
+    app.kubernetes.io/name: spectrum-x-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: spectrumxconfig-editor-role
 rules:
 - apiGroups:
   - spectrumx.nvidia.com
@@ -19,14 +22,6 @@ rules:
 - apiGroups:
   - spectrumx.nvidia.com
   resources:
-  - spectrumxconfigs/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - spectrumx.nvidia.com
-  resources:
   - spectrumxconfigs/status
   verbs:
   - get
-  - patch
-  - update
