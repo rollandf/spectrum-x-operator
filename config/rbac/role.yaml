@@ -7,6 +7,12 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ""
+  resources:
   - configmaps
   verbs:
   - get
@@ -38,3 +44,13 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - nv-ipam.nvidia.com
+  resources:
+  - cidrpools
+  verbs:
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch

@@ -329,7 +329,7 @@ func (r *FlowReconciler) getConfig(ctx context.Context) (*config.Config, error) 
 		return nil, err
 	}
 
-	cfg, err := config.ParseConfig(cfgMap.Data["config"])
+	cfg, err := config.ParseConfig(cfgMap.Data[config.ConfigMapKey])
 	if err != nil {
 		return nil, err
 	}
