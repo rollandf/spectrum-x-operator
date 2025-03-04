@@ -20,13 +20,19 @@ import (
 	"encoding/json"
 )
 
+const (
+	// ConfigMapKey is the name of the key in ConfigMap which store
+	// configuration
+	ConfigMapKey = "config"
+)
+
 type Rail struct {
 	Name   string `json:"name"`
-	Subnet string `json:"subnet"`
+	Subnet string `json:"subnet"` // /11 subnet
 }
 
 type SpectrumXNetworks struct {
-	CrossRailSubnet string `json:"cross_rail_subnet"`
+	CrossRailSubnet string `json:"cross_rail_subnet"` // /8 subnet
 	MTU             string `json:"mtu"`
 	Rails           []Rail `json:"rails"`
 }

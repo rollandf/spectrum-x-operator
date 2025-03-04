@@ -26,17 +26,24 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	"github.com/Mellanox/spectrum-x-operator/internal/controller"
 	"github.com/Mellanox/spectrum-x-operator/internal/version"
+
+	nvipamv1 "github.com/Mellanox/nvidia-k8s-ipam/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -47,7 +54,7 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
+	utilruntime.Must(nvipamv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -59,6 +66,9 @@ func main() {
 	var enableHTTP2 bool
 	var tlsOpts []func(*tls.Config)
 	var printVersion bool
+	var configMapNamespace string
+	var configMapName string
+	var cidrPoolsNamespace string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -70,6 +80,9 @@ func main() {
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 	flag.BoolVar(&printVersion, "version", false, "print version and exit")
+	flag.StringVar(&configMapNamespace, "cm-namespace", "default", "Spectrum-x config map namespace")
+	flag.StringVar(&configMapName, "cm-name", "specx-config", "Spectrum-x config map name")
+	flag.StringVar(&cidrPoolsNamespace, "cidrpools-namespace", "default", "CIDRPools namespace")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -133,20 +146,27 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "1f9fb416.nvidia.com",
-		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
-		// when the Manager ends. This requires the binary to immediately end when the
-		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
-		// speeds up voluntary leader transitions as the new leader don't have to wait
-		// LeaseDuration time first.
-		//
-		// In the default scaffold provided, the program ends immediately after
-		// the manager stops, so would be fine to enable this option. However,
-		// if you are doing or is intended to do any operation such as perform cleanups
-		// after the manager stops then its usage might be unsafe.
-		// LeaderElectionReleaseOnCancel: true,
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
+				&corev1.ConfigMap{}: {
+					Field: fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s,metadata.namespace=%s",
+						configMapName, configMapNamespace)),
+				},
+			},
+		},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
+		os.Exit(1)
+	}
+
+	if err = (&controller.NvIPAMReconciler{
+		Client:             mgr.GetClient(),
+		ConfigMapNamespace: configMapNamespace,
+		ConfigMapName:      configMapName,
+		CIDRPoolsNamespace: cidrPoolsNamespace,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create NvIPAMReconciler", "NvIPAMReconciler", "ConfigMap")
 		os.Exit(1)
 	}
 
