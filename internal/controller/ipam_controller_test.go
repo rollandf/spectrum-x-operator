@@ -174,12 +174,12 @@ func rail1ExpectedSpec() nvipamv1.CIDRPoolSpec {
 		StaticAllocations: []nvipamv1.CIDRPoolStaticAllocation{
 			{
 				NodeName: "host-1",
-				Gateway:  "192.0.0.0",
+				Gateway:  "192.0.0.1",
 				Prefix:   "192.0.0.0/31",
 			},
 			{
 				NodeName: "host-2",
-				Gateway:  "192.0.0.2",
+				Gateway:  "192.0.0.3",
 				Prefix:   "192.0.0.2/31",
 			},
 		},
@@ -198,12 +198,12 @@ func rail2ExpectedSpec() nvipamv1.CIDRPoolSpec {
 		StaticAllocations: []nvipamv1.CIDRPoolStaticAllocation{
 			{
 				NodeName: "host-1",
-				Gateway:  "192.32.0.0",
+				Gateway:  "192.32.0.1",
 				Prefix:   "192.32.0.0/31",
 			},
 			{
 				NodeName: "host-2",
-				Gateway:  "192.32.0.2",
+				Gateway:  "192.32.0.3",
 				Prefix:   "192.32.0.2/31",
 			},
 		},

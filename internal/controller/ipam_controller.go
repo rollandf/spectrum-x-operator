@@ -19,7 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
-	"strings"
+	"net"
 	"time"
 
 	apiErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -108,7 +108,11 @@ func (r *NvIPAMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 func (r *NvIPAMReconciler) reconcileCIDRPools(ctx context.Context, cfg *config.Config) error {
 	logr := log.FromContext(ctx)
 	for _, rail := range cfg.SpectrumXNetworks.Rails {
-		pool := r.generateCIDRPool(&rail, cfg.Hosts, cfg.SpectrumXNetworks.CrossRailSubnet)
+		pool, err := r.generateCIDRPool(&rail, cfg.Hosts, cfg.SpectrumXNetworks.CrossRailSubnet)
+		if err != nil {
+			logr.Error(err, "Fail to build CIDRPool", "rail", rail)
+			return err
+		}
 		logr.Info("Creating CIDRPool", "name", pool.Name)
 		if err := r.Client.Patch(ctx, pool, client.Apply, client.ForceOwnership, client.FieldOwner(spectrumXIPAMControllerName)); err != nil {
 			return fmt.Errorf("error while patching %s %s: %w", pool.GetObjectKind().GroupVersionKind().String(), client.ObjectKeyFromObject(pool), err)
@@ -118,8 +122,11 @@ func (r *NvIPAMReconciler) reconcileCIDRPools(ctx context.Context, cfg *config.C
 }
 
 // generateCIDRPool generates a CIDRPool object for the given Rail
-func (r *NvIPAMReconciler) generateCIDRPool(rail *config.Rail, hosts []config.Host, crossRailNet string) *nvipamv1.CIDRPool {
-	staticAllocations := getHostsAllocation(rail.Name, hosts)
+func (r *NvIPAMReconciler) generateCIDRPool(rail *config.Rail, hosts []config.Host, crossRailNet string) (*nvipamv1.CIDRPool, error) {
+	staticAllocations, err := getHostsAllocation(rail.Name, hosts)
+	if err != nil {
+		return nil, err
+	}
 	pool := &nvipamv1.CIDRPool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      rail.Name,
@@ -145,25 +152,30 @@ func (r *NvIPAMReconciler) generateCIDRPool(rail *config.Rail, hosts []config.Ho
 	}
 	pool.ObjectMeta.ManagedFields = nil
 	pool.SetGroupVersionKind(nvipamv1.GroupVersion.WithKind(cidrPoolType))
-	return pool
+	return pool, nil
 }
 
 // getHostsAllocation  computes the static allocations for the hosts for a specific Rail
-func getHostsAllocation(rail string, hosts []config.Host) []nvipamv1.CIDRPoolStaticAllocation {
+func getHostsAllocation(rail string, hosts []config.Host) ([]nvipamv1.CIDRPoolStaticAllocation, error) {
 	allocs := make([]nvipamv1.CIDRPoolStaticAllocation, 0)
 	for _, h := range hosts {
 		for _, r := range h.Rails {
 			if r.Name == rail {
+				_, ipNet, err := net.ParseCIDR(r.Network)
+				if err != nil {
+					return allocs, err
+				}
+				gw := nvipamv1.GetGatewayForSubnet(ipNet, 1)
 				alloc := nvipamv1.CIDRPoolStaticAllocation{
 					NodeName: h.HostID,
 					Prefix:   r.Network,
-					Gateway:  strings.Split(r.Network, "/")[0],
+					Gateway:  gw,
 				}
 				allocs = append(allocs, alloc)
 			}
 		}
 	}
-	return allocs
+	return allocs, nil
 }
 
 // reconcileDelete delete created CIDRPools and remove finalizer
