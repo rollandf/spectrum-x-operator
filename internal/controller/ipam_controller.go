@@ -141,6 +141,14 @@ func (r *NvIPAMReconciler) generateCIDRPool(rail *config.Rail, hosts []config.Ho
 					Dst: crossRailNet,
 				},
 			},
+			NodeSelector: &corev1.NodeSelector{
+				NodeSelectorTerms: []corev1.NodeSelectorTerm{{
+					MatchExpressions: []corev1.NodeSelectorRequirement{{
+						Key:      "node-role.kubernetes.io/worker",
+						Operator: corev1.NodeSelectorOpExists,
+					}},
+				}},
+			},
 		},
 	}
 	pool.ObjectMeta.ManagedFields = nil

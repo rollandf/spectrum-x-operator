@@ -187,6 +187,14 @@ func rail1ExpectedSpec() nvipamv1.CIDRPoolSpec {
 			{Dst: "192.0.0.0/11"},
 			{Dst: "192.0.0.0/8"},
 		},
+		NodeSelector: &corev1.NodeSelector{
+			NodeSelectorTerms: []corev1.NodeSelectorTerm{{
+				MatchExpressions: []corev1.NodeSelectorRequirement{{
+					Key:      "node-role.kubernetes.io/worker",
+					Operator: corev1.NodeSelectorOpExists,
+				}},
+			}},
+		},
 	}
 }
 
@@ -210,6 +218,14 @@ func rail2ExpectedSpec() nvipamv1.CIDRPoolSpec {
 		Routes: []nvipamv1.Route{
 			{Dst: "192.32.0.0/11"},
 			{Dst: "192.0.0.0/8"},
+		},
+		NodeSelector: &corev1.NodeSelector{
+			NodeSelectorTerms: []corev1.NodeSelectorTerm{{
+				MatchExpressions: []corev1.NodeSelectorRequirement{{
+					Key:      "node-role.kubernetes.io/worker",
+					Operator: corev1.NodeSelectorOpExists,
+				}},
+			}},
 		},
 	}
 }
