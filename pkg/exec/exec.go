@@ -22,7 +22,7 @@ import (
 	"strings"
 )
 
-//go:generate mockgen -package exec -destination mock_exec.go . API
+//go:generate ../../bin/mockgen -package exec -destination mock_exec.go . API
 
 type API interface {
 	Execute(command string) (string, error)
