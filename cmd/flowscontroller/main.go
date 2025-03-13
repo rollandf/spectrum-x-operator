@@ -23,6 +23,7 @@ import (
 
 	"github.com/Mellanox/spectrum-x-operator/internal/controller"
 	"github.com/Mellanox/spectrum-x-operator/pkg/exec"
+	"github.com/Mellanox/spectrum-x-operator/pkg/lib/netlink"
 
 	env "github.com/caarlos0/env/v11"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -137,6 +138,17 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&controller.OvsIPaddressReconciler{
+		NodeName:           Options.NodeName,
+		Client:             mgr.GetClient(),
+		Exec:               &exec.Exec{},
+		ConfigMapNamespace: configMapNamespace,
+		ConfigMapName:      configMapName,
+		NetlinkLib:         netlink.New(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "OVS-IP-Address")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

@@ -19,6 +19,7 @@ spec:
       labels:
         control-plane: flowcontroller
     spec:
+      hostNetwork: true
       securityContext:
         runAsNonRoot: false
       containers:

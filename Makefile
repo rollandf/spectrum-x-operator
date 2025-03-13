@@ -125,6 +125,10 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
+.PHONY: mock-generate
+mock-generate: gomock
+	go generate ./...
+
 .PHONY: fmt
 fmt: ## Run go fmt against code.
 	go fmt ./...
@@ -272,6 +276,10 @@ golangci-lint:
 	set -e ;\
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell dirname $(GOLANGCI_LINT)) $(GOLANGCI_LINT_VERSION) ;\
 	}
+
+GOMOCK = $(shell pwd)/bin/mockgen
+gomock:
+	$(call go-install-tool,$(GOMOCK),github.com/golang/mock/mockgen,v1.6.0)
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary
