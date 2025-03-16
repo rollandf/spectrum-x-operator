@@ -1,6 +1,6 @@
 module github.com/Mellanox/spectrum-x-operator
 
-go 1.23.0
+go 1.24
 
 require (
 	github.com/Mellanox/nvidia-k8s-ipam v0.3.5
