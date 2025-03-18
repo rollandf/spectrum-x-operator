@@ -56,6 +56,7 @@ type NvIPAMReconciler struct {
 	CIDRPoolsNamespace string
 }
 
+//+kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=configmaps/finalizers,verbs=update
 //+kubebuilder:rbac:groups=nv-ipam.nvidia.com,resources=cidrpools,verbs=get;list;patch;delete;deletecollection
 
