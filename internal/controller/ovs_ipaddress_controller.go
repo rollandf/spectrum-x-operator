@@ -120,22 +120,6 @@ func (r *OvsIPaddressReconciler) processRailDeviceMapping(ctx context.Context, m
 		return fmt.Errorf("failed to set OVS internal interface state up %s: %w", bridgeInternalIfc, err)
 	}
 
-	// Get the IP and subnet from railDevice
-	railAddrs, err := r.getIPsFromInterface(railDevice)
-	if err != nil {
-		return fmt.Errorf("failed to get IP from rail %s, device %s: %w", rail, railDevice, err)
-	}
-
-	if len(railAddrs) == 0 {
-		logr.Info("No IP found on rail device", "rail", rail, "dev", railDevice)
-		return nil
-	}
-
-	// Extract the full CIDR (IP + subnet mask)
-	railCIDR := railAddrs[0].String()
-	railIP := railAddrs[0].IP.String()
-	logr.Info("Rail IP with subnet", "rail", rail, "dev", railDevice, "CIDR", railCIDR)
-
 	// Get all IPs from bridge interface
 	bridgeAddrs, err := r.getIPsFromInterface(bridgeInternalIfc)
 	if err != nil {
@@ -156,6 +140,22 @@ func (r *OvsIPaddressReconciler) processRailDeviceMapping(ctx context.Context, m
 			return fmt.Errorf("failed to add gateway IP %s to OVS bridge interface %s: %w", gwCIDR, bridgeInternalIfc, err)
 		}
 	}
+
+	// Get the IP and subnet from railDevice
+	railAddrs, err := r.getIPsFromInterface(railDevice)
+	if err != nil {
+		return fmt.Errorf("failed to get IP from rail %s, device %s: %w", rail, railDevice, err)
+	}
+
+	if len(railAddrs) == 0 {
+		logr.Info("No IP found on rail device", "rail", rail, "dev", railDevice)
+		return nil
+	}
+
+	// Extract the full CIDR (IP + subnet mask)
+	railCIDR := railAddrs[0].String()
+	railIP := railAddrs[0].IP.String()
+	logr.Info("Rail IP with subnet", "rail", rail, "dev", railDevice, "CIDR", railCIDR)
 
 	// Ensure the bridge has the rail IP (with subnet) and move it from railDevice if needed
 	if _, exists := bridgeIPSet[railIP]; !exists {
