@@ -11,6 +11,15 @@ rules:
   verbs:
   - update
 - apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - get
+  - patch
+  - update
+- apiGroups:
   - coordination.k8s.io
   resources:
   - leases
@@ -54,6 +63,7 @@ rules:
   resources:
   - cidrpools
   verbs:
+  - create
   - delete
   - deletecollection
   - get
