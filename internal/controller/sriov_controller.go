@@ -77,6 +77,7 @@ func (r *SRIOVReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 			// Return early if the object is not found.
 			return ctrl.Result{}, nil
 		}
+		return ctrl.Result{}, err
 	}
 	// Handle deletion reconciliation loop.
 	if !cm.ObjectMeta.DeletionTimestamp.IsZero() {
@@ -284,9 +285,8 @@ func (r *SRIOVReconciler) reconcileDelete(ctx context.Context, cm *corev1.Config
 	}
 	logr.Info("Removing finalizer")
 	controllerutil.RemoveFinalizer(cm, spectrumXSRIOVFinalizer)
-	cm.ObjectMeta.ManagedFields = nil
-	if err := r.Client.Patch(ctx, cm, client.Apply, client.ForceOwnership, client.FieldOwner(spectrumXSRIOVControllerName)); err != nil {
-		return ctrl.Result{}, fmt.Errorf("error while removing finalizer to configmap %w", err)
+	if err := r.Update(ctx, cm); err != nil {
+		return ctrl.Result{}, fmt.Errorf("error while removing finalizer from configmap: %w", err)
 	}
 	return ctrl.Result{}, nil
 }

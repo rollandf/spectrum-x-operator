@@ -58,7 +58,8 @@ type NvIPAMReconciler struct {
 
 //+kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=configmaps/finalizers,verbs=update
-//+kubebuilder:rbac:groups=nv-ipam.nvidia.com,resources=cidrpools,verbs=get;list;patch;delete;deletecollection
+//+kubebuilder:rbac:groups=nv-ipam.nvidia.com,resources=cidrpools,verbs=get;list;patch;create;delete;deletecollection
+//+kubebuilder:rbac:groups="",resources=events,verbs=get;create;patch;update
 
 func (r *NvIPAMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logr := log.FromContext(ctx)
@@ -71,6 +72,7 @@ func (r *NvIPAMReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			// Return early if the object is not found.
 			return ctrl.Result{}, nil
 		}
+		return ctrl.Result{}, err
 	}
 	// Handle deletion reconciliation loop.
 	if !cm.ObjectMeta.DeletionTimestamp.IsZero() {
@@ -188,9 +190,8 @@ func (r *NvIPAMReconciler) reconcileDelete(ctx context.Context, cm *corev1.Confi
 	}
 	logr.Info("Removing finalizer")
 	controllerutil.RemoveFinalizer(cm, spectrumXFinalizer)
-	cm.ObjectMeta.ManagedFields = nil
-	if err := r.Client.Patch(ctx, cm, client.Apply, client.ForceOwnership, client.FieldOwner(spectrumXIPAMControllerName)); err != nil {
-		return ctrl.Result{}, fmt.Errorf("error while removing finalizer to configmap %w", err)
+	if err := r.Update(ctx, cm); err != nil {
+		return ctrl.Result{}, fmt.Errorf("error while removing finalizer from configmap: %w", err)
 	}
 	return ctrl.Result{}, nil
 }

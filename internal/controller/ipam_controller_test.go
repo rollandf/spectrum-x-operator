@@ -63,7 +63,46 @@ var _ = Describe("SpectrumXConfig Controller", func() {
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(pool.Spec).To(BeEquivalentTo(rail2ExpectedSpec()))
 			}, time.Second*15).Should(Succeed())
-
+			By("Delete configmap")
+			err := k8sClient.Delete(ctx, &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: cmName, Namespace: ns.Name}})
+			Expect(err).ToNot(HaveOccurred())
+		})
+		It("should successfully delete CIDRPools", func() {
+			ipamReconciler.CIDRPoolsNamespace = ns.Name
+			ipamReconciler.ConfigMapNamespace = ns.Name
+			By("Reconciling the created config map")
+			updateConfigMap(ctx, ns.Name, validConfig())
+			By("Verify CIDR pools created")
+			Eventually(func(g Gomega) {
+				pool, err := getCIDRPool(ns.Name, "rail-1")
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(pool.Spec).To(BeEquivalentTo(rail1ExpectedSpec()))
+				pool, err = getCIDRPool(ns.Name, "rail-2")
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(pool.Spec).To(BeEquivalentTo(rail2ExpectedSpec()))
+			}, time.Second*15).Should(Succeed())
+			By("Delete configmap")
+			err := k8sClient.Delete(ctx, &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: cmName, Namespace: ns.Name}})
+			Expect(err).ToNot(HaveOccurred())
+			By("Verify CIDR pools deleted")
+			Eventually(func(g Gomega) {
+				_, err := getCIDRPool(ns.Name, "rail-1")
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(apiErrors.IsNotFound(err)).To(BeTrue())
+				_, err = getCIDRPool(ns.Name, "rail-2")
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(apiErrors.IsNotFound(err)).To(BeTrue())
+			}, time.Second*30).Should(Succeed())
+			By("Verify CM is deleted")
+			Eventually(func(g Gomega) {
+				configMap := &corev1.ConfigMap{}
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: cmName, Namespace: ns.Name},
+					configMap)
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(apiErrors.IsNotFound(err)).To(BeTrue())
+			}, time.Second*30).Should(Succeed())
 		})
 		It("should fail reconcile", func() {
 			By("Reconciling the created config map with invalid json")
