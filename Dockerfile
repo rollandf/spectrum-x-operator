@@ -38,12 +38,9 @@ COPY ./ ./
 # by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
 RUN --mount=type=cache,target=/go/pkg/mod/ GO_GCFLAGS=${GCFLAGS} make build
 
-FROM ubuntu:24.04
+FROM nvcr.io/nvidia/doca/doca:2.10.0-full-rt-host
 
 RUN apt update && apt install -y \
-    openvswitch-common \
-    openvswitch-switch \
-    iproute2 \
     iputils-arping
 
 WORKDIR /
