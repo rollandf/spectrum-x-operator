@@ -39,8 +39,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	//+kubebuilder:scaffold:imports
-
-	nvipamv1 "github.com/Mellanox/nvidia-k8s-ipam/api/v1alpha1"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
@@ -50,7 +48,6 @@ var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
 var ctx, testManagerCancelFunc = context.WithCancel(ctrl.SetupSignalHandler())
-var ipamReconciler *NvIPAMReconciler
 
 const cmName = "specx-config-test"
 
@@ -65,9 +62,6 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "hack", "crds")},
-		ErrorIfCRDPathMissing: true,
-
 		// The BinaryAssetsDirectory is only required if you want to run the tests directly
 		// without call the makefile target test. If not informed it will look for the
 		// default path defined in controller-runtime which is /usr/local/kubebuilder/.
@@ -86,8 +80,6 @@ var _ = BeforeSuite(func() {
 	err = corev1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = nvipamv1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
 	//+kubebuilder:scaffold:scheme
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
@@ -106,14 +98,6 @@ var _ = BeforeSuite(func() {
 			Metrics: server.Options{
 				BindAddress: "0",
 			}})
-	Expect(err).ToNot(HaveOccurred())
-
-	ipamReconciler = &NvIPAMReconciler{
-		Client:        k8sClient,
-		Scheme:        testManager.GetScheme(),
-		ConfigMapName: cmName,
-	}
-	err = ipamReconciler.SetupWithManager(testManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	go func() {

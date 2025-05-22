@@ -59,17 +59,6 @@ rules:
   - patch
   - update
 - apiGroups:
-  - nv-ipam.nvidia.com
-  resources:
-  - cidrpools
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-- apiGroups:
   - sriovnetwork.openshift.io
   resources:
   - ovsnetworks
