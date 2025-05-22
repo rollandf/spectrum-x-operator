@@ -44,7 +44,6 @@ import (
 	"github.com/Mellanox/spectrum-x-operator/internal/controller"
 	"github.com/Mellanox/spectrum-x-operator/internal/version"
 
-	nvipamv1 "github.com/Mellanox/nvidia-k8s-ipam/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	// +kubebuilder:scaffold:imports
 )
@@ -56,7 +55,6 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(nvipamv1.AddToScheme(scheme))
 	utilruntime.Must(sriovnetworkv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
@@ -82,7 +80,6 @@ func main() {
 	var printVersion bool
 	var configMapNamespace string
 	var configMapName string
-	var cidrPoolsNamespace string
 	var sriovObjNamespace string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
@@ -97,7 +94,6 @@ func main() {
 	flag.BoolVar(&printVersion, "version", false, "print version and exit")
 	flag.StringVar(&configMapNamespace, "cm-namespace", "default", "Spectrum-x config map namespace")
 	flag.StringVar(&configMapName, "cm-name", "specx-config", "Spectrum-x config map name")
-	flag.StringVar(&cidrPoolsNamespace, "cidrpools-namespace", "default", "CIDRPools namespace")
 	flag.StringVar(&sriovObjNamespace, "sriov-obj-namespace", "default", "SRIOV Network Operator namespace")
 	opts := zap.Options{
 		Development: true,
@@ -173,16 +169,6 @@ func main() {
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
-	}
-
-	if err = (&controller.NvIPAMReconciler{
-		Client:             mgr.GetClient(),
-		ConfigMapNamespace: configMapNamespace,
-		ConfigMapName:      configMapName,
-		CIDRPoolsNamespace: cidrPoolsNamespace,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create NvIPAMReconciler", "NvIPAMReconciler", "ConfigMap")
 		os.Exit(1)
 	}
 
