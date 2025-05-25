@@ -51,7 +51,6 @@ spec:
           - --leader-elect
           - --health-probe-bind-address=:8081
           - --cm-namespace=$(POD_NAMESPACE)
-          - --sriov-obj-namespace=$(POD_NAMESPACE)
         env:
           - name: POD_NAMESPACE
             valueFrom:
