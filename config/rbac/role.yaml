@@ -7,12 +7,6 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - configmaps/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - ""
-  resources:
   - events
   verbs:
   - create
@@ -58,16 +52,3 @@ rules:
   - get
   - patch
   - update
-- apiGroups:
-  - sriovnetwork.openshift.io
-  resources:
-  - ovsnetworks
-  - sriovnetworknodepolicies
-  - sriovnetworkpoolconfigs
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
