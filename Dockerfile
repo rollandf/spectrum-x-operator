@@ -51,6 +51,6 @@ COPY --from=builder /workspace /src
 
 USER 65532:65532
 
-ENTRYPOINT ["/manager"]
+ENTRYPOINT ["/flowcontroller"]
 
 LABEL org.opencontainers.image.source=https://github.com/Mellanox/spectrum-x-operator
