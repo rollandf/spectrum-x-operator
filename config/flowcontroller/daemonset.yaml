@@ -39,6 +39,8 @@ spec:
       containers:
       - command:
         - /flowcontroller
+        - --metrics-bind-address=0
+        - --health-probe-bind-address=0
         image: controller:latest
         name: flowcontroller
         env:
@@ -66,18 +68,6 @@ spec:
           mountPath: /var/run/openvswitch/
         - name: ovs-systemd-config
           mountPath: /etc/default/openvswitch-switch
-        livenessProbe:
-          httpGet:
-            path: /healthz
-            port: 8081
-          initialDelaySeconds: 15
-          periodSeconds: 20
-        readinessProbe:
-          httpGet:
-            path: /readyz
-            port: 8081
-          initialDelaySeconds: 5
-          periodSeconds: 10
         resources:
           limits:
             cpu: 500m
