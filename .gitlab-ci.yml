@@ -59,6 +59,9 @@ variables: # additional variables defined at the gitlab group scope
         GITHUB_TOKEN \
         STIG_SCRIPTS_REPO \
         UBUNTU_STIG_BASE_IMAGE \
+        RHEL_STIG_BASE_IMAGE \
+        RH_USERNAME \
+        RH_PASSWORD \
         NSPECT_ID \
         SSA_CLIENT_ID_PULSE_OSS \
         SSA_CLIENT_SECRET_PULSE_OSS \
@@ -80,11 +83,18 @@ variables: # additional variables defined at the gitlab group scope
     # determine docker tag
     - |
       if [ -n "$CI_COMMIT_TAG" ]; then
-        DOCKER_TAG=$CI_COMMIT_TAG-stig-fips
+        UBUNTU_DOCKER_TAG=$CI_COMMIT_TAG-stig-fips-ubuntu
       else
-        DOCKER_TAG=$(git rev-parse --short HEAD)  # short git commit sha
+        UBUNTU_DOCKER_TAG=$(git rev-parse --short HEAD)-ubuntu
       fi
-    - echo "DOCKER_TAG=$DOCKER_TAG" | tee -a build.env
+    - echo "UBUNTU_DOCKER_TAG=$UBUNTU_DOCKER_TAG" | tee -a build.env
+    - |
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        RHEL_DOCKER_TAG=$CI_COMMIT_TAG-stig-fips-rhel
+      else
+        RHEL_DOCKER_TAG=$(git rev-parse --short HEAD)-rhel
+      fi
+    - echo "RHEL_DOCKER_TAG=$RHEL_DOCKER_TAG" | tee -a build.env
     # fetch STIG FIPS scripts
     - |
       git clone \
@@ -110,18 +120,33 @@ variables: # additional variables defined at the gitlab group scope
 build-operator-stig-image:
   extends: .build-stig-image
   script:
-    # build operator image
+    # build operator image (Ubuntu)
     - |
       docker build \
         --secret id=stig_script,src=/tmp/stig-scripts/stig-fixer.sh \
         --build-arg GOPROXY=$GOPROXY \
         --build-arg UBUNTU_STIG_BASE_IMAGE=$UBUNTU_STIG_BASE_IMAGE \
-        --file      Dockerfile.stig \
-        --tag       $DOCKER_REGISTRY/$OPERATOR_IMAGE_NAME:$DOCKER_TAG \
+        --file      Dockerfile.stig-ubuntu \
+        --tag       $DOCKER_REGISTRY/$OPERATOR_IMAGE_NAME:$UBUNTU_DOCKER_TAG \
         .
-    # push
-    - docker push $DOCKER_REGISTRY/$OPERATOR_IMAGE_NAME:$DOCKER_TAG
-    - echo "OPERATOR_IMAGE=$DOCKER_REGISTRY/$OPERATOR_IMAGE_NAME:$DOCKER_TAG" | tee -a build.env
+    # push (Ubuntu)
+    - docker push $DOCKER_REGISTRY/$OPERATOR_IMAGE_NAME:$UBUNTU_DOCKER_TAG
+    - echo "OPERATOR_IMAGE=$DOCKER_REGISTRY/$OPERATOR_IMAGE_NAME:$UBUNTU_DOCKER_TAG" | tee -a build.env
+    # build operator image (RHEL)
+    - |
+      echo "$RH_USERNAME" > rh_username
+      echo "$RH_PASSWORD" > rh_password
+      docker build \
+        --secret id=rh_username,src=rh_username \
+        --secret id=rh_password,src=rh_password \
+        --build-arg GOPROXY=$GOPROXY \
+        --build-arg RHEL_STIG_BASE_IMAGE=$RHEL_STIG_BASE_IMAGE \
+        --file      Dockerfile.stig-rhel \
+        --tag       $DOCKER_REGISTRY/$OPERATOR_IMAGE_NAME:$RHEL_DOCKER_TAG \
+        .
+    # push (RHEL)
+    - docker push $DOCKER_REGISTRY/$OPERATOR_IMAGE_NAME:$RHEL_DOCKER_TAG
+    - echo "RHEL_OPERATOR_IMAGE=$DOCKER_REGISTRY/$OPERATOR_IMAGE_NAME:$RHEL_DOCKER_TAG" | tee -a build.env
   artifacts:
     reports:
       dotenv: build.env
@@ -139,7 +164,6 @@ update-component-version-in-network-operator:
   image: golang:1-alpine
   variables:  # additional variables defined at the gitlab group scope
     GITHUB_EMAIL: svc-cloud-orch-gh@nvidia.com
-    OPERATOR_COMPONENT_NAME: spectrumXOperatorStigFips
     DRY_RUN: false
   before_script:
     # install packages
@@ -153,15 +177,17 @@ update-component-version-in-network-operator:
     - cd network-operator
   script:
     # update versions in hack/release.yaml and examples
-    - echo "Updating version for $OPERATOR_COMPONENT_NAME to $DOCKER_TAG"
-    - yq -i ".$OPERATOR_COMPONENT_NAME.version = \"$DOCKER_TAG\"" hack/release.yaml
+    - echo "Updating version for spectrumXOperatorStigFipsUbuntu to $UBUNTU_DOCKER_TAG"
+    - yq -i ".spectrumXOperatorStigFipsUbuntu.version = \"$UBUNTU_DOCKER_TAG\"" hack/release.yaml
+    - echo "Updating version for spectrumXOperatorStigFipsRhel to $RHEL_DOCKER_TAG"
+    - yq -i ".spectrumXOperatorStigFipsRhel.version = \"$RHEL_DOCKER_TAG\"" hack/release.yaml
     - make release-build
     # create CI branch if needed
     - |
       if git diff --exit-code --color=always; then
         UPDATE_BRANCH=""
       else
-        UPDATE_BRANCH=ci/update-spectrum-x-operator-stig-fips-version-to-$DOCKER_TAG
+        UPDATE_BRANCH=ci/update-spectrum-x-operator-stig-fips-versions-to-$(git rev-parse --short HEAD)
         git checkout -b $UPDATE_BRANCH
       fi
     - echo "UPDATE_BRANCH=$UPDATE_BRANCH"
@@ -169,7 +195,7 @@ update-component-version-in-network-operator:
     - |
       if [ -n "$UPDATE_BRANCH" ]; then
         git add .
-        git commit -sm "ci: update Spectrum-X Operator STIG components to $DOCKER_TAG"
+        git commit -sm "ci: update Spectrum-X Operator STIG components to $UBUNTU_DOCKER_TAG and $RHEL_DOCKER_TAG"
         dry_run=""
         if [ "$DRY_RUN" = "true" ]; then
           dry_run="echo DRY_RUN: would have run: "
@@ -186,8 +212,8 @@ update-component-version-in-network-operator:
         gh pr create $dry_run \
           --head "$UPDATE_BRANCH" \
           --base master \
-          --title "ci: update Spectrum-X Operator STIG components to $DOCKER_TAG (of branch $CI_COMMIT_BRANCH)" \
-          --body "Automated CI update for components '${OPERATOR_COMPONENT_NAME}', created by internal GitLab CI for release branch $CI_COMMIT_BRANCH." \
+          --title "ci: update Spectrum-X Operator STIG components (Ubuntu: $UBUNTU_DOCKER_TAG, RHEL: $RHEL_DOCKER_TAG)" \
+          --body "Automated CI update for components 'spectrumXOperatorStigFipsUbuntu' and 'spectrumXOperatorStigFipsRhel', created by internal GitLab CI for release branch $CI_COMMIT_BRANCH." \
           --reviewer e0ne --reviewer almaslennikov --reviewer rollandf --reviewer heyvister1
       fi
 # Pulse scan for operator image
@@ -204,7 +230,7 @@ pulse-scan-oss-operator:
     SSA_CLIENT_ID: $SSA_CLIENT_ID_PULSE_OSS
     SSA_CLIENT_SECRET: $SSA_CLIENT_SECRET_PULSE_OSS
     PULSE_REGISTRY_NGC_PASSWORD: $NVCR_TOKEN
-    CONTAINER_IMAGE: $DOCKER_REGISTRY/$OPERATOR_IMAGE_NAME:$DOCKER_TAG
+    CONTAINER_IMAGE: $DOCKER_REGISTRY/$OPERATOR_IMAGE_NAME:$UBUNTU_DOCKER_TAG
     NSPECT_ID: $NSPECT_ID
     PROGRAM_VERSION: $NSPECT_RELEASE_VERSION
   allow_failure: true  # non gating (pipeline stages will display warnings instead of failures)
@@ -228,7 +254,49 @@ pulse-scan-stig-operator:
     SSA_CLIENT_ID: $SSA_CLIENT_ID_PULSE_STIG
     SSA_CLIENT_SECRET: $SSA_CLIENT_SECRET_PULSE_STIG
     PULSE_REGISTRY_NGC_PASSWORD: $NVCR_TOKEN
-    CONTAINER_IMAGE: $DOCKER_REGISTRY/$OPERATOR_IMAGE_NAME:$DOCKER_TAG
+    CONTAINER_IMAGE: $DOCKER_REGISTRY/$OPERATOR_IMAGE_NAME:$UBUNTU_DOCKER_TAG
     NSPECT_ID: $NSPECT_ID
     PROGRAM_VERSION: $NSPECT_RELEASE_VERSION
   allow_failure: true  # non gating (pipeline stages will display warnings instead of failures)
+
+pulse-scan-oss-operator-rhel:
+  stage: pulse-scan-oss
+  extends: .scan-image-no-policy
+  needs:
+    - job: build-operator-stig-image
+      artifacts: true
+  tags:
+    - os/linux
+    - type/docker
+  variables:
+    SSA_CLIENT_ID: $SSA_CLIENT_ID_PULSE_OSS
+    SSA_CLIENT_SECRET: $SSA_CLIENT_SECRET_PULSE_OSS
+    PULSE_REGISTRY_NGC_PASSWORD: $NVCR_TOKEN
+    CONTAINER_IMAGE: $DOCKER_REGISTRY/$OPERATOR_IMAGE_NAME:$RHEL_DOCKER_TAG
+    NSPECT_ID: $NSPECT_ID
+    PROGRAM_VERSION: $NSPECT_RELEASE_VERSION
+  allow_failure: true
+
+pulse-scan-stig-operator-rhel:
+  stage: pulse-scan-stig
+  extends: .stig-scan-image
+  needs:
+    - job: pulse-scan-oss-operator-rhel
+    - job: build-operator-stig-image
+      artifacts: true
+  tags:
+    - os/linux
+    - type/docker
+  services:
+    - docker:24-dind
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^network-operator-.*$/'
+    - if: '$CI_COMMIT_BRANCH =~ /^network-operator-.*$/'
+  variables:
+    SSA_CLIENT_ID: $SSA_CLIENT_ID_PULSE_STIG
+    SSA_CLIENT_SECRET: $SSA_CLIENT_SECRET_PULSE_STIG
+    PULSE_REGISTRY_NGC_PASSWORD: $NVCR_TOKEN
+    CONTAINER_IMAGE: $DOCKER_REGISTRY/$OPERATOR_IMAGE_NAME:$RHEL_DOCKER_TAG
+    NSPECT_ID: $NSPECT_ID
+    PROGRAM_VERSION: $NSPECT_RELEASE_VERSION
+  allow_failure: true
