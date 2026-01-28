@@ -126,6 +126,7 @@ build-operator-stig-image:
     # build operator image (Ubuntu)
     - |
       docker build \
+        --network host \
         --secret id=stig_script,src=/tmp/stig-scripts/stig-fixer.sh \
         --build-arg GOPROXY=$GOPROXY \
         --build-arg UBUNTU_STIG_BASE_IMAGE=$UBUNTU_STIG_BASE_IMAGE \
@@ -140,6 +141,7 @@ build-operator-stig-image:
       echo "$RH_USERNAME" > rh_username
       echo "$RH_PASSWORD" > rh_password
       docker build \
+        --network host \
         --secret id=rh_username,src=rh_username \
         --secret id=rh_password,src=rh_password \
         --build-arg GOPROXY=$GOPROXY \
